@@ -1,3 +1,12 @@
+> **This is a modified fork.** Mapzon's fork of TinyGSM `v0.12.0`, maintained for the MapIT
+> M510 tracker. One behavioural deviation from upstream: on the SIM7080 the `SMS Ready` URC no
+> longer triggers a re-entrant `init()`. See **[FORK.md](FORK.md)** for the change, the reason
+> for it, and what it means if you relied on the upstream behaviour. Everything else is
+> upstream `v0.12.0`; the LGPL-3.0 license is unchanged.
+> Upstream: <https://github.com/vshymanskyy/TinyGSM> — report non-fork issues there.
+
+---
+
 [![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner-direct.svg)](https://vshymanskyy.github.io/StandWithUkraine)
 
 ![TinyGSM logo](https://cdn.rawgit.com/vshymanskyy/TinyGSM/d18e93dc51fe988a0b175aac647185457ef640b5/extras/logo.svg)
