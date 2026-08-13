@@ -134,6 +134,8 @@ class TinyGsmSim7080 : public TinyGsmSim70xx<TinyGsmSim7080>,
   explicit TinyGsmSim7080(Stream& stream)
       : TinyGsmSim70xx<TinyGsmSim7080>(stream) {
     memset(sockets, 0, sizeof(sockets));
+    unexpected_reset_    = false;  // MAPZON FORK ADDITION (see FORK.md)
+    unexpected_reset_at_ = 0;
   }
 
   /*
@@ -759,17 +761,47 @@ class TinyGsmSim7080 : public TinyGsmSim70xx<TinyGsmSim7080>,
       return true;
     } else if (data.endsWith(GF(AT_NL "SMS Ready" AT_NL))) {
       data = "";
+      // MAPZON FORK DEVIATION (2026-08-13, see FORK.md): upstream calls init()
+      // here. That re-enters the modem from inside an open response window --
+      // it consumes the pending reply (the caller times out empty) and silently
+      // reverts host configuration, notably AT+CMEE=0 over a host-set CMEE=2.
+      // Record the event instead and let the host driver re-provision when it
+      // owns the modem.
+      unexpected_reset_    = true;
+      unexpected_reset_at_ = millis();
       DBG("### Unexpected module reset!");
-      init();
       data = "";
       return true;
     }
     return false;
   }
 
+  /*
+   * MAPZON FORK ADDITION (2026-08-13, see FORK.md)
+   *
+   * Unexpected-reset reporting. The module announces a reset with the
+   * "SMS Ready" URC; handleURCs records it here rather than re-initializing
+   * behind the host's back. consumeUnexpectedReset() is consume-on-read.
+   *
+   * No internal synchronization: these are written from handleURCs, i.e. from
+   * whichever task is driving the modem, and are expected to be read under the
+   * same serialization the host already applies to modem access.
+   */
+ public:
+  bool consumeUnexpectedReset() {
+    bool seen         = unexpected_reset_;
+    unexpected_reset_ = false;
+    return seen;
+  }
+  uint32_t lastUnexpectedResetMillis() const {
+    return unexpected_reset_at_;
+  }
+
  protected:
   GsmClientSim7080* sockets[TINY_GSM_MUX_COUNT];
   String            certificates[TINY_GSM_MUX_COUNT];
+  bool              unexpected_reset_;
+  uint32_t          unexpected_reset_at_;
 };
 
 #endif  // SRC_TINYGSMCLIENTSIM7080_H_
